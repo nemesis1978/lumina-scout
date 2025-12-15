@@ -57,15 +57,22 @@ def get_serper_results(query, api_key):
         st.error(f"Connection Error (Serper): {e}")
         return []
 
-def generate_synonyms_openai(target, location, api_key):
+def generate_synonyms(target, location, provider, api_key, model_name):
     """
-    Uses OpenAI to generate intelligent search variations.
+    Uses LLM to generate intelligent search variations.
+    Supports OpenAI, OpenRouter, and Local LLMs.
     """
     if not api_key:
         return [f"{target} {location}"]
     
     try:
-        client = openai.OpenAI(api_key=api_key)
+        base_url = None
+        if provider == "OpenRouter":
+            base_url = "https://openrouter.ai/api/v1"
+        elif provider == "Local/Custom":
+            base_url = "http://localhost:1234/v1"
+            
+        client = openai.OpenAI(api_key=api_key, base_url=base_url)
         
         prompt = f"""
         Act as a Lead Generation Expert.
@@ -78,10 +85,19 @@ def generate_synonyms_openai(target, location, api_key):
         Example Output: ["Dentista Polla", "Studio Dentistico Polla", "Clinica Odontoiatrica Polla"]
         """
         
+        # OpenRouter Extra Headers
+        extra_headers = {}
+        if provider == "OpenRouter":
+            extra_headers = {
+                "HTTP-Referer": "https://lumina-scout.com",
+                "X-Title": "Lumina Scout"
+            }
+        
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model=model_name,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.7
+            temperature=0.7,
+            extra_headers=extra_headers
         )
         
         content = response.choices[0].message.content.strip()
@@ -160,7 +176,19 @@ with st.sidebar:
     st.header("⚙️ Configuration")
     
     serper_key = st.text_input("SERPER_API_KEY", type="password", help="Required for Google Maps Search")
-    openai_key = st.text_input("OPENAI_API_KEY", type="password", help="Required for Keyword Expansion")
+    serper_key = st.text_input("SERPER_API_KEY", type="password", help="Required for Google Maps Search")
+    
+    st.markdown("### 🧠 LLM Settings")
+    provider = st.selectbox("Provider", ["OpenAI", "OpenRouter", "Local/Custom"])
+    
+    default_model = "gpt-3.5-turbo"
+    if provider == "OpenRouter":
+        default_model = "google/gemma-2-9b-it:free"
+    elif provider == "Local/Custom":
+        default_model = "local-model"
+        
+    openai_key = st.text_input(f"{provider} API Key", type="password")
+    model_name = st.text_input("Model Name", value=default_model)
     
     st.divider()
     st.markdown("Developed by **Lumina AI**")
@@ -202,7 +230,7 @@ if start_btn:
         
         # A. Keyword Generation
         with st.status("🧠 Step 1: generating strategic search vectors...", expanded=True) as status:
-            queries = generate_synonyms_openai(target_category, target_location, openai_key)
+            queries = generate_synonyms(target_category, target_location, provider, openai_key, model_name)
             st.write(f"**Generated Strategy:**")
             st.code("\n".join(queries))
             status.update(label="✅ Search Strategy Ready", state="complete", expanded=False)
