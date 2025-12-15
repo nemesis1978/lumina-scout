@@ -176,7 +176,7 @@ with st.sidebar:
     st.header("⚙️ Configuration")
     
     serper_key = st.text_input("SERPER_API_KEY", type="password", help="Required for Google Maps Search")
-    serper_key = st.text_input("SERPER_API_KEY", type="password", help="Required for Google Maps Search")
+
     
     st.markdown("### 🧠 LLM Settings")
     provider = st.selectbox("Provider", ["OpenAI", "OpenRouter", "Local/Custom"])
