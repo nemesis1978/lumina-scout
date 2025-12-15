@@ -7,7 +7,13 @@ import os
 import json
 import time
 import io
+import io
 from urllib.parse import urlparse
+import urllib3
+import warnings
+
+# Suppress SSL Warnings
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- 1. CONFIGURATION & SETUP ---
 st.set_page_config(
